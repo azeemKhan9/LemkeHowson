@@ -1,22 +1,161 @@
 #include "stdafx.h"
 #include <iostream>
 #include <Eigen\Dense>
+#include <vector>
 
 using namespace Eigen;
 
-typedef Eigen::Matrix<float, 3, 4> Matrix34f;
+MatrixXf pivot(MatrixXf M, int row, int column);
+
+typedef Eigen::Matrix<float, 3, 4> Matrix34f; // Will have to be adjusted depending on input matrix sizes
 
 int main()
 {
-	Matrix34f A, B;
-	A << 4, 12, 8, 6,
-		16, 8, 12, 8,
-		10, 8, 10, 9;
-	B << 25, 5, 5, 8,
-		1, 15, 8, 4,
-		17, 10, 13, 9;
+	int k0 = 2; //Initial pivot label
+	int maxPivots = 50000;
+	int player;
+	int numPivots = 0;
+	MatrixXf LP;
+	
+	// Matrix initialisation - adjust depending on matrix size
+	//Matrix34f A, B;
+	Matrix2f A, B;
+	A << 2, 2,
+		4, 1;
+	B << 2, 4,
+		2, 1;
 	std::cout << A << std::endl;
 	std::cout << B << std::endl;
+	int m = A.rows();
+	int n = A.cols();
+
+	int k = k0;
+	if (k0 <= m) {
+		player = 0;
+	}
+	else {
+		player = 1;
+	}
+
+	//Construct tableaus
+	MatrixXf tab1(n, m + n + 1), tab2(m, m + n + 1);
+	tab1.block(0, 0, n, m) = B.transpose();
+	tab1.block(0, m, n, n) = MatrixXf::Identity(n, n);
+	for (int i = 0; i < n; ++i) {
+		tab1(i, m + n) = 1;
+	}
+	tab2.block(0, 0, m, m) = MatrixXf::Identity(m, m);
+	tab2.block(0, m, m, n) = A;
+	for (int i = 0; i < m; ++i) {
+		tab2(i, m + n) = 1;
+	}
+	std::cout << tab1 << std::endl;
+	std::cout << tab2 << std::endl;
+
+	std::vector<int> tab1Labels(m), tab2Labels(n);
+	for (int i = 0; i < m; i++) {
+		tab1Labels[i] = i + 1;
+		//std::cout << tab1Labels[i];
+	}
+	for (int i = 0; i < n; i++) {
+		tab2Labels[i] = m + i + 1;
+		//std::cout << tab2Labels[i];
+	}
+	MatrixXf tables[2] = { tab1, tab2 };
+	std::vector<int> labels[2] = { tab2Labels, tab1Labels };
+
+	while (numPivots < maxPivots) { //Pivoting loop
+		LP = tables[player];
+		int r = LP.rows();
+		int c = LP.cols();
+		int max = 0;
+		int ind = -1;
+		float t;
+		for (int i = 0; i < r; i++) {
+			t = LP(i, k - 1) / LP(i, m + n);
+			if (t >= max) {
+				ind = i;
+				max = t;
+			}
+		}
+		tables[player] = pivot(LP, ind, k - 1);
+		//std::cout << tables[player] << std::endl;
+		numPivots += 1;
+		int temp = labels[player][ind];
+		labels[player][ind] = k;
+		k = temp;
+		if (k == k0) {
+			std::cout << "A Nash equilibrium has been found in " << numPivots << " pivots." << std::endl;
+			break;
+		}
+		if (player == 0) {
+			player = 1;
+		}
+		else {
+			player = 0;
+		}
+	}
+
+	if (numPivots >= maxPivots) {
+		std::cerr << "Maximum number of allowed pivots has been reached!" << std::endl;
+	}
+
+	VectorXf nashEqbm[2];
+	VectorXf x(3);
+	for (int p = 0; p < 2; p++) { //p refers to players
+		if (p == 0) {
+			x.resize(m);
+		}
+		else if (p == 1) {
+			x.resize(n);
+		}
+		std::vector<int> rows = labels[p];
+		float sum = 0.0;
+
+		/*for (int i = 0; i < rows.size(); i++) {
+			std::cout << rows[i] << std::endl;
+		}*/
+
+		LP = tables[p];
+		//std::cout << tables[p] << std::endl;
+		for (int i = 0; i < rows.size(); i++) {
+			if (p == 0 && rows[i] <= m) {
+				x(rows[i] - 1) = LP(i, m + n) / LP(i, rows[i] - 1);
+			}
+			else if (p == 1 && rows[i] > m) {
+				x(rows[i] - 1 - m) = LP(i, m + n) / LP(i, rows[i] - 1);
+			}
+		}
+		for (int i = 0; i < x.size(); i++) {
+			if (x(i) <= 1.0e-7) {
+				x(i) = 0;
+			}
+			else {
+				sum = sum + x(i);
+			}
+		}
+		x = (1.0 / sum) * x; //Normalise vector to make it stochastic.
+		nashEqbm[p] = x;
+		std::cout << nashEqbm[p] << std::endl;
+	}
 
 	return 0;
+}
+
+
+MatrixXf pivot(MatrixXf M, int row, int column) { //Function that pivots tableau on given element (row, column)
+	MatrixXf X = M;
+	int m = M.rows();
+	int n = M.cols();
+	for (int i = 0; i < M.rows(); i++) {
+		if (i == row) {
+			continue;
+		}
+		else {
+			X.row(i) = X.row(i) - (M(i, column) / M(row, column) * M.row(row));
+			// X.block(i, 0, 1, m + n + 1) = M.block(i, 0, 1, m + n + 1) - (M(i, column) / M(row, column) * M.block(row, 0, 1, m + n + 1));
+		}
+	}
+	X.row(row) = X.row(row) / X(row, column);
+	return X;
 }
