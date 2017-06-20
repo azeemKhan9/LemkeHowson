@@ -2,28 +2,53 @@
 #include <iostream>
 #include <Eigen\Dense>
 #include <vector>
+#include <time.h>
 
 using namespace Eigen;
 
 MatrixXf pivot(MatrixXf M, int row, int column);
 
-typedef Eigen::Matrix<float, 3, 4> Matrix34f; // Will have to be adjusted depending on input matrix sizes
+void isDegenerate(VectorXf x, VectorXf y);
+
+void adjustElem(MatrixXf M);
+
+typedef Eigen::Matrix<float, 2, 3> MatrixXXf; // Will have to be adjusted depending on input matrix sizes
 
 int main()
 {
-	int k0 = 2; //Initial pivot label
+	int k0 = 1; //Initial pivot label
 	int maxPivots = 50000;
 	int player;
 	int numPivots = 0;
-	MatrixXf LP;
+	MatrixXf A, B, LP, X3;
+	MatrixXf X1;
+	MatrixXi X2;
 	
 	// Matrix initialisation - adjust depending on matrix size
-	//Matrix34f A, B;
-	Matrix2f A, B;
-	A << 2, 2,
-		4, 1;
-	B << 2, 4,
-		2, 1;
+	//MatrixXXf A, B;
+	std::srand((unsigned int)time(0));
+	A = 10 * MatrixXf::Random(7, 4);
+	B = 10 * MatrixXf::Random(7, 4);
+	for (int i = 0; i < A.rows(); i++) {
+		for (int j = 0; j < A.cols(); j++) {
+			A(i, j) = round(abs(A(i, j)));
+			B(i, j) = round(abs(B(i, j)));
+		}
+	}
+	//X2 = X1.template cast<int>();
+	//X3 = X2.template cast<float>();
+	//adjustElem(X1);
+	//std::cout << X1 << std::endl;
+
+	/*Matrix4f A, B;
+	A << 1, 0, -3, 4, 
+		1, -1, 2, 1,
+		5, 1, 2, 3,
+		1, 2, 0, 0;
+	B << -1, 0, 1, 0,
+		1, 5, 4, 7,
+		-4, 8, 1, 9,
+		-2, 1, 12, 3;*/
 	std::cout << A << std::endl;
 	std::cout << B << std::endl;
 	int m = A.rows();
@@ -32,6 +57,10 @@ int main()
 	int k = k0;
 	if (k0 <= m) {
 		player = 0;
+	}
+	else if (k0 < 1 || k0 > m + n) {
+		std::cerr << "ERROR : Initial pivot is outside range." << std::endl;
+		return 1;
 	}
 	else {
 		player = 1;
@@ -49,8 +78,8 @@ int main()
 	for (int i = 0; i < m; ++i) {
 		tab2(i, m + n) = 1;
 	}
-	std::cout << tab1 << std::endl;
-	std::cout << tab2 << std::endl;
+	//std::cout << tab1 << std::endl;
+	//std::cout << tab2 << std::endl;
 
 	std::vector<int> tab1Labels(m), tab2Labels(n);
 	for (int i = 0; i < m; i++) {
@@ -97,7 +126,8 @@ int main()
 	}
 
 	if (numPivots >= maxPivots) {
-		std::cerr << "Maximum number of allowed pivots has been reached!" << std::endl;
+		std::cerr << "ERROR: Maximum number of allowed pivots has been reached!" << std::endl;
+		return 1;
 	}
 
 	VectorXf nashEqbm[2];
@@ -138,6 +168,7 @@ int main()
 		nashEqbm[p] = x;
 		std::cout << nashEqbm[p] << std::endl;
 	}
+	isDegenerate(nashEqbm[0], nashEqbm[1]);
 
 	return 0;
 }
@@ -153,9 +184,40 @@ MatrixXf pivot(MatrixXf M, int row, int column) { //Function that pivots tableau
 		}
 		else {
 			X.row(i) = X.row(i) - (M(i, column) / M(row, column) * M.row(row));
-			// X.block(i, 0, 1, m + n + 1) = M.block(i, 0, 1, m + n + 1) - (M(i, column) / M(row, column) * M.block(row, 0, 1, m + n + 1));
 		}
 	}
 	X.row(row) = X.row(row) / X(row, column);
 	return X;
+}
+
+void isDegenerate(VectorXf x, VectorXf y) {
+	int elem = 0;
+	int elem2 = 0;
+	for (int i = 0; i < x.size(); i++) {
+		if (x(i) == 0) {
+			continue;
+		}
+		else {
+			elem += 1;
+		}
+	}
+	for (int i = 0; i < y.size(); i++) {
+		if (y(i) == 0) {
+			continue;
+		}
+		else {
+			elem2 += 1;
+		}
+	}
+	if (elem != elem2) {
+		std::cout << "WARNING: This game is degenerate" << std::endl;
+	}
+}
+
+void adjustElem(MatrixXf M) {
+	for (int i = 0; i < M.rows(); i++) {
+		for (int j = 0; j < M.cols(); j++) {
+			M(i,j) = round(M(i, j));
+		}
+	}
 }
