@@ -10,45 +10,43 @@ MatrixXf pivot(MatrixXf M, int row, int column);
 
 void isDegenerate(VectorXf x, VectorXf y);
 
-void adjustElem(MatrixXf M);
-
-typedef Eigen::Matrix<float, 2, 3> MatrixXXf; // Will have to be adjusted depending on input matrix sizes
+typedef Eigen::Matrix<float, 4, 4> MatrixXXf; // Will have to be adjusted depending on input matrix sizes
 
 int main()
 {
 	int k0 = 1; //Initial pivot label
-	int maxPivots = 50000;
+	int maxPivots = 10000;
 	int player;
 	int numPivots = 0;
-	MatrixXf A, B, LP, X3;
-	MatrixXf X1;
-	MatrixXi X2;
+	MatrixXf A, B;
+	MatrixXf LP;
+	//MatrixXXf A, B;
 	
 	// Matrix initialisation - adjust depending on matrix size
-	//MatrixXXf A, B;
 	std::srand((unsigned int)time(0));
-	A = 10 * MatrixXf::Random(7, 4);
-	B = 10 * MatrixXf::Random(7, 4);
+	A = 10 * MatrixXf::Random(4, 4);
+	B = 10 * MatrixXf::Random(4, 4);
 	for (int i = 0; i < A.rows(); i++) {
 		for (int j = 0; j < A.cols(); j++) {
 			A(i, j) = round(abs(A(i, j)));
-			B(i, j) = round(abs(B(i, j)));
+			//B(i, j) = round(abs(B(i, j)));
+			if (i == j) {
+				B(i, j) = 1.0;
+			}
+			else {
+				B(i, j) = 0.0;
+			}
 		}
 	}
-	//X2 = X1.template cast<int>();
-	//X3 = X2.template cast<float>();
-	//adjustElem(X1);
-	//std::cout << X1 << std::endl;
 
-	/*Matrix4f A, B;
-	A << 1, 0, -3, 4, 
-		1, -1, 2, 1,
-		5, 1, 2, 3,
-		1, 2, 0, 0;
-	B << -1, 0, 1, 0,
-		1, 5, 4, 7,
-		-4, 8, 1, 9,
-		-2, 1, 12, 3;*/
+	/*A << 4, 4, 0, 2,
+		8, 9, 3, 1,
+		5, 6, 2, 5,
+		8, 1, 7, 10;
+	B << 9, 9, 10, 8,
+		8, 3, 2, 5,
+		1, 10, 7, 2,
+		1, 1, 1, 9;*/
 	std::cout << A << std::endl;
 	std::cout << B << std::endl;
 	int m = A.rows();
@@ -157,7 +155,7 @@ int main()
 			}
 		}
 		for (int i = 0; i < x.size(); i++) {
-			if (x(i) <= 1.0e-7) {
+			if (x(i) <= 1.0e-6) {
 				x(i) = 0;
 			}
 			else {
@@ -166,7 +164,7 @@ int main()
 		}
 		x = (1.0 / sum) * x; //Normalise vector to make it stochastic.
 		nashEqbm[p] = x;
-		std::cout << nashEqbm[p] << std::endl;
+		//std::cout << nashEqbm[p] << std::endl;
 	}
 	isDegenerate(nashEqbm[0], nashEqbm[1]);
 
@@ -211,13 +209,5 @@ void isDegenerate(VectorXf x, VectorXf y) {
 	}
 	if (elem != elem2) {
 		std::cout << "WARNING: This game is degenerate" << std::endl;
-	}
-}
-
-void adjustElem(MatrixXf M) {
-	for (int i = 0; i < M.rows(); i++) {
-		for (int j = 0; j < M.cols(); j++) {
-			M(i,j) = round(M(i, j));
-		}
 	}
 }
